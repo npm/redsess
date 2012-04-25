@@ -2,7 +2,7 @@
   "author": "Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)",
   "name": "redsess",
   "description": "Yet another redis session thing for node",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "repository": {
     "type": "git",
     "url": "git://github.com/isaacs/redsess.git"
@@ -12,7 +12,7 @@
     "redis": "~0.7.1"
   },
   "engines": {
-    "node": ">=0.7.8"
+    "node": ">=0.7.7"
   },
   "devDependencies": {
     "tap": "~0.2.4",
