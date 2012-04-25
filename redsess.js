@@ -24,7 +24,7 @@ function RedSess (req, res, opt) {
   this.response = res
 
   // 2 week sessions by default.
-  this.expire = opt.expire || 60 * 60 * 24 * 14
+  this.expire = opt && opt.expire || 60 * 60 * 24 * 14
 }
 
 RedSess.createClient = function (conf) {
@@ -131,11 +131,11 @@ function sessionToken (req, res, opt) {
     return false
   }
 
-  var s = req.cookies.get(opt.cookieName || 's', {signed: true})
+  var s = req.cookies.get(opt && opt.cookieName || 's', {signed: true})
   if (s) {
     return req.sessionToken = res.sessionToken = s
   }
   s = require('crypto').randomBytes(30).toString('base64')
-  res.cookies.set(opt.cookieName || 's', s, {signed: true})
+  res.cookies.set(opt && opt.cookieName || 's', s, {signed: true})
   return req.sessionToken = res.sessionToken = s
 }
