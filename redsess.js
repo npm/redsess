@@ -5,10 +5,11 @@ var redis = require("redis")
 
 function RedSess (req, res, opt) {
   if (!client) {
+    console.error('RedSess: no client yet', req.url, req.headers)
     res.statusCode = 503
     res.setHeader('content-type', 'text/plain')
     res.setHeader('retry-after', '10')
-    res.end('Redis client not yet loaded\n')
+    res.end('Redis client not yet loaded.\n')
     return
   }
 
@@ -28,12 +29,26 @@ function RedSess (req, res, opt) {
 }
 
 RedSess.createClient = function (conf) {
+  conf = conf || {}
   client = redis.createClient(conf.port, conf.host, conf)
 }
 
+RedSess.quit = RedSess.close = RedSess.end = function (cb) {
+  if (!client) return cb && cb()
+  if (cb) client.once("end", cb)
+  client.quit()
+}
+
+RedSess.destroy = function () {
+  client.end()
+}
+
+
+
+
 RedSess.prototype.del = function (k, cb) {
   if (typeof k === 'function' || !k && !cb) {
-    return this.delAll(this.id, k)
+    return this.delAll(k || cb)
   }
   // actually, delete all keys starting with k:* as well
   this.client.hkeys(this.id, function (er, keys) {
@@ -72,11 +87,11 @@ RedSess.prototype.set = function (k, v, cb) {
 }
 
 RedSess.prototype.get = function (k, cb) {
-  if (!cb) return this.client.expire(this.id, this.expire)
-
   if (typeof k === 'function' || !k) {
     return this.getAll(k || cb)
   }
+
+  if (!cb) return this.client.expire(this.id, this.expire)
 
   this.getAll(function (er, all) {
     if (er) return cb(er)
@@ -86,6 +101,8 @@ RedSess.prototype.get = function (k, cb) {
 }
 
 RedSess.prototype.getAll = function (cb) {
+  if (!cb) return this.client.expire(this.id, this.expire)
+
   this.client.hgetall(this.id, function (er, data) {
     this.client.expire(this.id, this.expire)
     if (er) return cb(er)
@@ -133,11 +150,15 @@ function sessionToken (req, res, opt) {
     return false
   }
 
-  var s = req.cookies.get(opt && opt.cookieName || 's', {signed: true})
+  var s = req.cookies.get( opt && opt.cookieName || 's'
+                         , { signed: !!req.cookies.keys })
   if (s) {
     return req.sessionToken = res.sessionToken = s
   }
   s = require('crypto').randomBytes(30).toString('base64')
-  res.cookies.set(opt && opt.cookieName || 's', s, {signed: true})
+  res.cookies.set( opt && opt.cookieName || 's'
+                 , s
+                 , { signed: !!res.cookies.keys })
+
   return req.sessionToken = res.sessionToken = s
 }

@@ -13,5 +13,13 @@
   },
   "engines": {
     "node": ">=0.7.8"
+  },
+  "devDependencies": {
+    "tap": "~0.2.4",
+    "cookies": "*",
+    "request": "~2.9.150"
+  },
+  "scripts": {
+    "test": "tap test"
   }
 }
