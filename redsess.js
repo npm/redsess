@@ -41,6 +41,8 @@ RedSess.prototype.del = function (k, cb) {
     var keys = keys.filter(function (key) {
       return key.split(/:/)[0] === k
     })
+    if (!keys.length) return cb()
+
     keys.unshift(this.id)
     this.client.hdel(keys, function (er) {
       this.client.expire(this.id, this.expire)
