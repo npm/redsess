@@ -31,6 +31,7 @@ function RedSess (req, res, opt) {
 RedSess.createClient = function (conf) {
   conf = conf || {}
   client = redis.createClient(conf.port, conf.host, conf)
+  if (conf.auth) client.auth(conf.auth)
 }
 
 RedSess.quit = RedSess.close = RedSess.end = function (cb) {

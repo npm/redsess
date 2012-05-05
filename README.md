@@ -61,6 +61,9 @@ Calls `redis.createClient` with the supplied options.  See
 (opts.host and opts.port are passed to redis.createClient as positional
 arguments, not on the configuration object.)
 
+If there's an `opts.auth` member, then it will use that string as a
+password to redis.
+
 * session.set(k, v, cb)
 
 Sets a key on the session.
