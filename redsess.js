@@ -1,10 +1,11 @@
 module.exports = RedSess
 
 var redis = require("redis")
-, client = null
+RedSess.client = null
 
 function RedSess (req, res, opt) {
-  if (!client) {
+  opt = opt || {}
+  if (!RedSess.client && !opt.client) {
     console.error('RedSess: no client yet', req.url, req.headers)
     res.statusCode = 503
     res.setHeader('content-type', 'text/plain')
@@ -20,28 +21,29 @@ function RedSess (req, res, opt) {
   }
 
   this.id = "session:" + s
-  this.client = client
+  this.client = opt.client || RedSess.client
   this.request = req
   this.response = res
 
   // 2 week sessions by default.
-  this.expire = opt && opt.expire || 60 * 60 * 24 * 14
+  this.expire = opt.expire || 60 * 60 * 24 * 14
 }
 
 RedSess.createClient = function (conf) {
   conf = conf || {}
-  client = redis.createClient(conf.port, conf.host, conf)
-  if (conf.auth) client.auth(conf.auth)
+  RedSess.client = redis.createClient(conf.port, conf.host, conf)
+  if (conf.auth) RedSess.client.auth(conf.auth)
+  return RedSess.client
 }
 
 RedSess.quit = RedSess.close = RedSess.end = function (cb) {
-  if (!client) return cb && cb()
-  if (cb) client.once("end", cb)
-  client.quit()
+  if (!RedSess.client) return cb && cb()
+  if (cb) RedSess.client.once("end", cb)
+  RedSess.client.quit()
 }
 
 RedSess.destroy = function () {
-  client.end()
+  RedSess.client.end()
 }
 
 
