@@ -20,6 +20,6 @@
     "request": "~2.9.150"
   },
   "scripts": {
-    "test": "tap test"
+    "test": "tap test/*.js"
   }
 }

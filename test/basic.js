@@ -3,14 +3,33 @@ var http = require('http')
 , tap = require('tap')
 , Cookies = require('cookies')
 , PORT = process.env.PORT || 1337
+, redisPort = 9990
+, redisAuth = 'testy-testing-authy-authing'
 , obj = {key:'val', obj:{foo:'bar'}}
 , str = 'val'
 , request = require('request')
 , server
 , jar = request.jar()
+, spawn = require('child_process').spawn
+, rcp
+, path = require('path')
+, conf = path.resolve(__dirname, 'redis.conf')
+, quitting = false
+
+tap.test('redis setup', function (t) {
+  rcp = spawn('redis-server', [conf])
+  rcp.on('exit', function (c) {
+    if (!quitting) throw new Error('redis-server crashed')
+  })
+  rcp.stderr.pipe(process.stderr)
+  rcp.stdout.pipe(process.stdout)
+  t.ok(rcp, 'redis child proc')
+  rcp.stdout.once('data', t.end.bind(t))
+})
+
 
 tap.test('setup', function (t) {
-  RedSess.createClient()
+  RedSess.createClient({ port: redisPort, auth: redisAuth })
   server = http.createServer(function (req, res) {
     console.error('SERVER', req.url)
     req.cookies = res.cookies = new Cookies(req, res)
@@ -220,11 +239,16 @@ tap.test('/del/all', function (t) {
 })
 
 tap.test('teardown', function (t) {
-  t.plan(2)
+  t.plan(3)
   RedSess.close(function () {
     t.pass("redis shutdown")
   })
   server.close(function () {
     t.pass('http shutdown')
   })
+  quitting = true
+  rcp.on('exit', function () {
+    t.pass('redis quit')
+  })
+  rcp.kill('SIGQUIT')
 })
