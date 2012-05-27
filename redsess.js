@@ -98,7 +98,7 @@ RedSess.prototype.get = function (k, cb) {
 
   this.getAll(function (er, all) {
     if (er) return cb(er)
-    all = all[k] || null
+    all = (all || {})[k] || null
     return cb(null, all)
   }.bind(this))
 }
