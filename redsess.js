@@ -97,9 +97,8 @@ RedSess.prototype.get = function (k, cb) {
   if (!cb) return this.client.expire(this.id, this.expire)
 
   this.getAll(function (er, all) {
-    if (er) return cb(er)
-    all = all[k] || null
-    return cb(null, all)
+    if (er || !all) return cb(er, null)
+    return cb(null, all.hasOwnProperty(k) ? all[k] : null)
   }.bind(this))
 }
 
