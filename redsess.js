@@ -120,7 +120,7 @@ function flatten (obj, into, prefix) {
   Object.keys(obj).forEach(function (k) {
     if (obj[k] && typeof obj[k] === "object") {
       flatten(obj[k], into, prefix + k)
-    } else into[prefix + k] = obj[k]
+    } else into[prefix + k] = '' + obj[k]
   })
   return into
 }
