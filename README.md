@@ -46,6 +46,7 @@ http.createServer(function (req, res) {
 
 * `expire` {Number} Time in seconds that sessions last Default=2 weeks
 * `cookieName` {String} Cookie name to use for session id's. Default = 's'
+* `cookies` {Object} `Cookies` instance to use instead of `req.cookies`
 
 ## Methods
 
