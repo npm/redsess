@@ -17,7 +17,7 @@ function RedSess (req, res, opt) {
   opt.cookies = opt.cookies || req.cookies
 
   // set the s-cookie
-  var s = sessionToken(req, res, opt)
+  var s = this.sessionToken = sessionToken(req, res, opt)
   if (s === false) {
     throw new Error('could not load session token')
   }
