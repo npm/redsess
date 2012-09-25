@@ -14,6 +14,8 @@ function RedSess (req, res, opt) {
     return
   }
 
+  opt.cookies = opt.cookies || req.cookies
+
   // set the s-cookie
   var s = sessionToken(req, res, opt)
   if (s === false) {
@@ -98,7 +100,7 @@ RedSess.prototype.get = function (k, cb) {
 
   this.getAll(function (er, all) {
     if (er) return cb(er)
-    all = all[k] || null
+    all = all && all[k] || null
     return cb(null, all)
   }.bind(this))
 }
@@ -109,7 +111,7 @@ RedSess.prototype.getAll = function (cb) {
   this.client.hgetall(this.id, function (er, data) {
     this.client.expire(this.id, this.expire)
     if (er) return cb(er)
-    return cb(er, unflatten(data))
+    return cb(er, unflatten(data) || {})
   }.bind(this))
 }
 
@@ -146,22 +148,22 @@ function unflatten (obj) {
 }
 
 function sessionToken (req, res, opt) {
-  if (!req.cookies) {
+  if (!opt.cookies) {
     res.statusCode = 500
     res.setHeader('content-type', 'text/plain')
     res.end('RedSess requires a cookies implementation')
     return false
   }
 
-  var s = req.cookies.get( opt && opt.cookieName || 's'
-                         , { signed: !!req.cookies.keys })
+  var s = opt.cookies.get( opt && opt.cookieName || 's'
+                         , { signed: !!opt.cookies.keys })
   if (s) {
-    return req.sessionToken = res.sessionToken = s
+    return s
   }
   s = require('crypto').randomBytes(30).toString('base64')
-  res.cookies.set( opt && opt.cookieName || 's'
+  opt.cookies.set( opt && opt.cookieName || 's'
                  , s
-                 , { signed: !!res.cookies.keys })
+                 , { signed: !!opt.cookies.keys })
 
-  return req.sessionToken = res.sessionToken = s
+  return s
 }
