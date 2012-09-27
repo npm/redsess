@@ -2,9 +2,8 @@
 
 Yet another redis session thing for node.
 
-This is built with [jed/cookies](https://github.com/jed/cookies) in
-mind, but as long as you stick any similar getter/setter on the request
-and response objects, then it'll work.
+This is built on top of [jed/cookies](https://github.com/jed/cookies).
+You can optionall pass in a 
 
 ## Example
 
@@ -15,13 +14,24 @@ var RedSess = require('redsess')
 , Keygrip = require('keygrip')
 , keys = new Keygrip(['some secret keys here'])
 
+// Create a client with the options that you'd pass to node_redis
 RedSess.createClient(redisOptions)
 
 http.createServer(function (req, res) {
-  req.cookies = res.cookies = new Cookies(req, res, keys)
-  req.session = res.session = new RedSess(req, res, options)
+  var session = new RedSess(req, res, {
+    keys: keys, // if keys are provided, they'll be used
+    cookieName: 's',
+    expire: expirationInSeconds, // default = 2 weeks
+    client: redisClient, // defaults to RedSess.client
+    keys: [ "this is a string key" ], // will be made into a keygrip obj
+    keys: new KeyGrip(keys), // this way also works
+  })
 
-  // .. some time later ..
+  // you can decorate like this if you chose
+  req.session = session
+  res.session = session
+
+  // .. and then some time later ..
   req.session.get('auth', function (er, auth) {
     if (!auth) {
       // redirect to login page
@@ -32,7 +42,8 @@ http.createServer(function (req, res) {
 
   // .. on the login page, if there's a post ..
   validateLogin(postedData, function (er, isValid) {
-    if (isValid) req.session.set('auth', postedData)
+    if (isValid)
+      req.session.set('auth', postedData)
   })
 
   // .. on the logout page ..
@@ -46,6 +57,11 @@ http.createServer(function (req, res) {
 
 * `expire` {Number} Time in seconds that sessions last Default=2 weeks
 * `cookieName` {String} Cookie name to use for session id's. Default = 's'
+* `keys` A [Keygrip](https://github.com/jed/keygrip) instance to use
+  to sign the session token cookie.  (If an array is passed in, then
+  RedSess will make a KeyGrip obj out of it.)
+* `client` If you have another redis client you'd like to use, then
+  you can do so.
 
 ## Methods
 
@@ -78,7 +94,8 @@ Fetches the key from the session.
 
 * session.get(cb)
 
-Fetches all keys from the session.
+Fetches all keys from the session.  If there is no data in the
+session, then it'll return `null`.
 
 * session.del(k, cb)
 
