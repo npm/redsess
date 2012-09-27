@@ -3,6 +3,8 @@ module.exports = RedSess
 var redis = require("redis")
 RedSess.client = null
 
+var Cookies = require('cookies')
+
 function RedSess (req, res, opt) {
   opt = opt || {}
   if (!RedSess.client && !opt.client) {
@@ -14,13 +16,15 @@ function RedSess (req, res, opt) {
     return
   }
 
+  // set up the cookies thingie
+  this.cookies = new Cookies(req, res, opt.keys)
+
   // set the s-cookie
-  var s = sessionToken(req, res, opt)
-  if (s === false) {
+  sessionToken.call(this, req, res, opt)
+  if (!this.token) {
     throw new Error('could not load session token')
   }
-
-  this.id = "session:" + s
+  this.id = "session:" + this.token
   this.client = opt.client || RedSess.client
   this.request = req
   this.response = res
@@ -103,7 +107,9 @@ RedSess.prototype.get = function (k, cb) {
 }
 
 RedSess.prototype.getAll = function (cb) {
-  if (!cb) return this.client.expire(this.id, this.expire)
+  // if no cb, then just update the expiration
+  if (!cb)
+    return this.client.expire(this.id, this.expire)
 
   this.client.hgetall(this.id, function (er, data) {
     this.client.expire(this.id, this.expire)
@@ -145,22 +151,12 @@ function unflatten (obj) {
 }
 
 function sessionToken (req, res, opt) {
-  if (!req.cookies) {
-    res.statusCode = 500
-    res.setHeader('content-type', 'text/plain')
-    res.end('RedSess requires a cookies implementation')
-    return false
+  var name = opt && opt.cookieName || 's'
+  var copt = { signed: !!this.cookies.keys }
+  var s = this.cookies.get(name, copt)
+  if (!s) {
+    s = require('crypto').randomBytes(30).toString('base64')
+    this.cookies.set(name, s, copt)
   }
-
-  var s = req.cookies.get( opt && opt.cookieName || 's'
-                         , { signed: !!req.cookies.keys })
-  if (s) {
-    return req.sessionToken = res.sessionToken = s
-  }
-  s = require('crypto').randomBytes(30).toString('base64')
-  res.cookies.set( opt && opt.cookieName || 's'
-                 , s
-                 , { signed: !!res.cookies.keys })
-
-  return req.sessionToken = res.sessionToken = s
+  return this.token = s
 }
