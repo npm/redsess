@@ -63,6 +63,8 @@ http.createServer(function (req, res) {
   RedSess will make a KeyGrip obj out of it.)
 * `client` If you have another redis client you'd like to use, then
   you can do so.
+* `cookies` If you already have a Cookies object, you may pass that
+  in.  If not specified, then it'll make a new one for you.
 
 ## Methods
 

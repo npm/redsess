@@ -33,7 +33,7 @@ function RedSess (req, res, opt) {
   }
 
   // set up the cookies thingie
-  this.cookies = new Cookies(req, res, this.keys)
+  this.cookies = opt.cookies || new Cookies(req, res, this.keys)
 
   // set the s-cookie
   var name = opt && opt.cookieName || 's'
