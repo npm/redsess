@@ -9,7 +9,7 @@
   },
   "main": "redsess.js",
   "dependencies": {
-    "redis": "~0.7.1"
+    "redis": "~0.8.1"
   },
   "engines": {
     "node": ">=0.7.7"

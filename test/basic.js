@@ -73,7 +73,7 @@ tap.test('setup', function (t) {
         return res.session.get(function (er, data) {
           if (er) throw er
           res.send(JSON.stringify(
-            {id: res.session.id, ok: true, data: data }))
+            { id: res.session.id, ok: true, data: data }))
         })
 
       case '/del/str':
@@ -232,7 +232,7 @@ tap.test('/del/all', function (t) {
     req('/get/all', function (er, res, data) {
       if (er) throw er
       t.equal(res.statusCode, 200)
-      t.deepEqual(data, { id: id, ok: true, data: {} })
+      t.deepEqual(data, { id: id, ok: true, data: null })
       t.end()
     })
   })
