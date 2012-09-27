@@ -5,6 +5,9 @@ RedSess.client = null
 
 var Cookies = require('cookies')
 
+// optional dependency
+try { var KeyGrip = require('keygrip') } catch (e) {}
+
 function RedSess (req, res, opt) {
   opt = opt || {}
   if (!RedSess.client && !opt.client) {
@@ -16,14 +19,36 @@ function RedSess (req, res, opt) {
     return
   }
 
+  // if we got an array of strings rather than a keygrip, then
+  // keygrip it up.
+  if (opt.keys) {
+    if (!KeyGrip)
+      throw new Error('keys provided by KeyGrip not available')
+    else if (Array.isArray(opt.keys))
+      this.keys = new KeyGrip(opt.keys)
+    else if (opt.keys instanceof KeyGrip)
+      this.keys = opt.keys
+    else
+      throw new Error('invalid keys provided')
+  }
+
   // set up the cookies thingie
-  this.cookies = new Cookies(req, res, opt.keys)
+  this.cookies = new Cookies(req, res, this.keys)
 
   // set the s-cookie
-  sessionToken.call(this, req, res, opt)
-  if (!this.token) {
+  var name = opt && opt.cookieName || 's'
+  var copt = { signed: !!this.keys }
+
+  var s = this.cookies.get(name, copt)
+  if (!s)
+    s = require('crypto').randomBytes(30).toString('base64')
+
+  this.cookies.set(name, s, copt)
+  this.token = s
+
+  if (!this.token)
     throw new Error('could not load session token')
-  }
+
   this.id = "session:" + this.token
   this.client = opt.client || RedSess.client
   this.request = req
@@ -36,13 +61,16 @@ function RedSess (req, res, opt) {
 RedSess.createClient = function (conf) {
   conf = conf || {}
   RedSess.client = redis.createClient(conf.port, conf.host, conf)
-  if (conf.auth) RedSess.client.auth(conf.auth)
+  if (conf.auth)
+    RedSess.client.auth(conf.auth)
   return RedSess.client
 }
 
 RedSess.quit = RedSess.close = RedSess.end = function (cb) {
-  if (!RedSess.client) return cb && cb()
-  if (cb) RedSess.client.once("end", cb)
+  if (!RedSess.client)
+    return cb && cb()
+  if (cb)
+    RedSess.client.once("end", cb)
   RedSess.client.quit()
 }
 
@@ -52,23 +80,27 @@ RedSess.destroy = function () {
 
 
 
-
 RedSess.prototype.del = function (k, cb) {
-  if (typeof k === 'function' || !k && !cb) {
+  if (typeof k === 'function' || !k && !cb)
     return this.delAll(k || cb)
-  }
+
   // actually, delete all keys starting with k:* as well
   this.client.hkeys(this.id, function (er, keys) {
-    if (er) return cb && cb(er)
+    if (er)
+      return cb && cb(er)
+
     var keys = keys.filter(function (key) {
       return key.split(/:/)[0] === k
     })
-    if (!keys.length) return cb && cb()
+
+    if (!keys.length)
+      return cb && cb()
 
     keys.unshift(this.id)
     this.client.hdel(keys, function (er) {
       this.client.expire(this.id, this.expire)
-      if (cb) return cb(er)
+      if (cb)
+        return cb(er)
     }.bind(this))
   }.bind(this))
 }
@@ -79,29 +111,34 @@ RedSess.prototype.delAll = function (cb) {
 
 RedSess.prototype.set = function (k, v, cb) {
   var kv = {}
-  if (typeof v === 'function') cb = v, v = null
-  if (v) {
+
+  if (typeof v === 'function')
+    cb = v, v = null
+
+  if (v)
     kv[k] = v
-  } else {
+  else
     kv = k
-  }
+
 
   kv = flatten(kv)
   this.client.hmset(this.id, kv, function (er) {
     this.client.expire(this.id, this.expire)
-    if (cb) return cb(er)
+    if (cb)
+      return cb(er)
   }.bind(this))
 }
 
 RedSess.prototype.get = function (k, cb) {
-  if (typeof k === 'function' || !k) {
+  if (typeof k === 'function' || !k)
     return this.getAll(k || cb)
-  }
 
-  if (!cb) return this.client.expire(this.id, this.expire)
+  if (!cb)
+    return this.client.expire(this.id, this.expire)
 
   this.getAll(function (er, all) {
-    if (er || !all) return cb(er, null)
+    if (er || !all)
+      return cb(er, null)
     return cb(null, all.hasOwnProperty(k) ? all[k] : null)
   }.bind(this))
 }
@@ -113,8 +150,9 @@ RedSess.prototype.getAll = function (cb) {
 
   this.client.hgetall(this.id, function (er, data) {
     this.client.expire(this.id, this.expire)
-    if (er) return cb(er)
-    return cb(er, unflatten(data))
+    if (!er)
+      data = unflatten(data)
+    cb(er, data)
   }.bind(this))
 }
 
@@ -148,15 +186,4 @@ function unflatten (obj) {
 
   })
   return into
-}
-
-function sessionToken (req, res, opt) {
-  var name = opt && opt.cookieName || 's'
-  var copt = { signed: !!this.cookies.keys }
-  var s = this.cookies.get(name, copt)
-  if (!s) {
-    s = require('crypto').randomBytes(30).toString('base64')
-    this.cookies.set(name, s, copt)
-  }
-  return this.token = s
 }
