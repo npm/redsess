@@ -3,7 +3,8 @@
 Yet another redis session thing for node.
 
 This is built on top of [jed/cookies](https://github.com/jed/cookies).
-You can optionall pass in a 
+You can optionally pass in a KeyGrip instance, or an array of keys to
+use to sign cookies.
 
 ## Example
 
