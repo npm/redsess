@@ -65,6 +65,8 @@ http.createServer(function (req, res) {
   you can do so.
 * `cookies` If you already have a Cookies object, you may pass that
   in.  If not specified, then it'll make a new one for you.
+* `cookieOptions` an object that extends the options object that is passed to
+  `cookies.set` and `cookies.get`
 
 ## Methods
 

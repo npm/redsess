@@ -4,6 +4,7 @@ var redis = require("redis")
 RedSess.client = null
 
 var Cookies = require('cookies')
+var util = require('util')
 
 // optional dependency
 try { var KeyGrip = require('keygrip') } catch (e) {}
@@ -41,7 +42,11 @@ function RedSess (req, res, opt) {
   // set the s-cookie
   var name = this.cookieName = opt.cookieName || 's'
   var expireDate = new Date(Date.now() + (this.expire*1000))
-  var copt = { expires: expireDate, signed: !!this.keys }
+  var cookieOptions = opt && opt.cookieOptions || {}
+  var copt = util._extend({
+    expires: expireDate,
+    signed: !!this.keys
+  }, cookieOptions)
 
   var s = this.cookies.get(name, copt)
   if (!s)
