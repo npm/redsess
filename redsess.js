@@ -32,12 +32,16 @@ function RedSess (req, res, opt) {
       throw new Error('invalid keys provided')
   }
 
+  // 2 week sessions by default.
+  this.expire = opt.expire || 60 * 60 * 24 * 14
+
   // set up the cookies thingie
   this.cookies = opt.cookies || new Cookies(req, res, this.keys)
 
   // set the s-cookie
   var name = opt && opt.cookieName || 's'
-  var copt = { signed: !!this.keys }
+  var expire_date = new Date(new Date().getTime()+(this.expire*1000))
+  var copt = { expires: expire_date, signed: !!this.keys }
 
   var s = this.cookies.get(name, copt)
   if (!s)
@@ -53,9 +57,6 @@ function RedSess (req, res, opt) {
   this.client = opt.client || RedSess.client
   this.request = req
   this.response = res
-
-  // 2 week sessions by default.
-  this.expire = opt.expire || 60 * 60 * 24 * 14
 }
 
 RedSess.createClient = function (conf) {
