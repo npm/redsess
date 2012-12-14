@@ -40,8 +40,8 @@ function RedSess (req, res, opt) {
 
   // set the s-cookie
   var name = opt && opt.cookieName || 's'
-  var expire_date = new Date(new Date().getTime()+(this.expire*1000))
-  var copt = { expires: expire_date, signed: !!this.keys }
+  var expireDate = new Date(Date.now() + (this.expire*1000))
+  var copt = { expires: expireDate, signed: !!this.keys }
 
   var s = this.cookies.get(name, copt)
   if (!s)

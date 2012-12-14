@@ -111,8 +111,12 @@ tap.test('setup', function (t) {
 
 function req (url, cb) {
   request({ url: 'http://localhost:' + PORT + url
+          , jar: jar
           , json: true }, cb)
 }
+
+
+var sessionId
 
 // just some random request to establish the session.
 tap.test('establish session', function (t) {
@@ -124,10 +128,19 @@ tap.test('establish session', function (t) {
     t.ok(data.id, 'has id')
     id = data.id
 
+    var c = jar.cookies[0]
+    t.ok(c)
+    t.equal(c.name, 's', 'cookie name')
+    t.like(c.value, /^.{40}$/, 'cookie value')
+    t.ok(c.httpOnly)
+    t.type(c.expires, Date)
+    t.ok(c.expires.getTime() > Date.now() + 60*1000)
+
+    sessionId = c.value
+
     t.end()
   })
 })
-
 
 tap.test('/set/str', function (t) {
   req('/set/str', function (er, res, data) {
@@ -143,6 +156,15 @@ tap.test('/set/obj', function (t) {
     if (er) throw er
     t.deepEqual(data, { id: id, ok: true, obj: obj })
     t.equal(res.statusCode, 200)
+
+    var c = jar.cookies[0]
+    t.ok(c)
+    t.equal(c.name, 's', 'cookie name')
+    t.equal(c.value, sessionId, 'cookie value')
+    t.ok(c.httpOnly)
+    t.type(c.expires, Date)
+    t.ok(c.expires.getTime() > Date.now() + 60*1000)
+
     t.end()
   })
 })
@@ -233,6 +255,16 @@ tap.test('/del/all', function (t) {
       if (er) throw er
       t.equal(res.statusCode, 200)
       t.deepEqual(data, { id: id, ok: true, data: null })
+
+      // note that deleting all the *data* doesn't change the session.
+      var c = jar.cookies[0]
+      t.ok(c)
+      t.equal(c.name, 's', 'cookie name')
+      t.equal(c.value, sessionId, 'cookie value')
+      t.ok(c.httpOnly)
+      t.type(c.expires, Date)
+      t.ok(c.expires.getTime() > Date.now() + 60*1000)
+
       t.end()
     })
   })
