@@ -97,6 +97,13 @@ tap.test('setup', function (t) {
             {id: res.session.id, ok: true, data: data }))
         })
 
+      case '/destroy':
+        return res.session.destroy(function (er, data) {
+          if (er) throw er;
+          res.send(JSON.stringify(
+            { ok: true, destroyed: true }))
+        })
+
       default:
         res.writeHead(404)
         res.end(JSON.stringify(
@@ -267,6 +274,42 @@ tap.test('/del/all', function (t) {
 
       t.end()
     })
+  })
+})
+
+// now delete our session and start over
+tap.test('/destroy', function (t) {
+  req('/destroy', function (er, res, data) {
+    var c = jar.cookies[0]
+    t.ok(c)
+    t.equal(c.name, 's', 'cookie name')
+    t.equal(c.value, '', 'destroyed cookie value')
+    t.ok(c.httpOnly)
+    t.type(c.expires, Date)
+    t.equal(c.expires.getTime(), 0)
+
+    t.end()
+  })
+})
+
+// now re-establish the session
+tap.test('re-establish session', function (t) {
+  req('/404', function (er, res, data) {
+    t.equal(res.statusCode, 404)
+    t.has(data, { error: 'not found' })
+
+    // from here on out, the id should always match.
+    t.ok(data.id, 'has id')
+    id = data.id
+
+    var c = jar.cookies[0]
+    t.ok(c)
+    t.equal(c.name, 's', 'cookie name')
+    t.like(c.value, /^.{40}$/, 'cookie value')
+    t.ok(c.httpOnly)
+    t.type(c.expires, Date)
+    t.ok(c.expires.getTime() > Date.now() + 60*1000)
+    t.end()
   })
 })
 

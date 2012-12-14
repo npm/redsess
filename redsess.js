@@ -39,7 +39,7 @@ function RedSess (req, res, opt) {
   this.cookies = opt.cookies || new Cookies(req, res, this.keys)
 
   // set the s-cookie
-  var name = opt && opt.cookieName || 's'
+  var name = this.cookieName = opt.cookieName || 's'
   var expireDate = new Date(Date.now() + (this.expire*1000))
   var copt = { expires: expireDate, signed: !!this.keys }
 
@@ -108,6 +108,17 @@ RedSess.prototype.del = function (k, cb) {
 
 RedSess.prototype.delAll = function (cb) {
   this.client.del(this.id, cb || function(){})
+}
+
+// delete all data, and kill the session entirely
+RedSess.prototype.destroy = function (cb) {
+  this.client.del(this.id, function (er) {
+    this.cookies.set(this.cookieName, '', {
+      expires: new Date(0),
+      signed: !!this.keys
+    })
+    cb(er)
+  }.bind(this))
 }
 
 RedSess.prototype.set = function (k, v, cb) {
