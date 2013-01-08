@@ -10,10 +10,7 @@
   "main": "redsess.js",
   "dependencies": {
     "redis": "~0.8.1",
-    "cookies": "~0.3.2"
-  },
-  "optionalDependencies": {
-    "keygrip": "~0.2.2"
+    "generic-session": "~0.0.0"
   },
   "engines": {
     "node": ">=0.7.7"

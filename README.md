@@ -107,3 +107,7 @@ Deletes a key from the session.
 * session.del(cb)
 
 Deletes the entire session.
+
+## Generic Session
+
+**redsess** uses [Generic Session](https://github.com/rvagg/node-generic-session) for session handling, see that project for more detailed documentation on the functionality available to session users.

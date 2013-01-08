@@ -1,16 +1,13 @@
-module.exports = RedSess
+module.exports = redSess
 
 var redis = require("redis")
-RedSess.client = null
+var genericSession = require("generic-session")
 
-var Cookies = require('cookies')
+redSess.client = null
 
-// optional dependency
-try { var KeyGrip = require('keygrip') } catch (e) {}
-
-function RedSess (req, res, opt) {
+function redSess (req, res, opt) {
   opt = opt || {}
-  if (!RedSess.client && !opt.client) {
+  if (!redSess.client && !opt.client) {
     console.error('RedSess: no client yet', req.url, req.headers)
     res.statusCode = 503
     res.setHeader('content-type', 'text/plain')
@@ -19,153 +16,95 @@ function RedSess (req, res, opt) {
     return
   }
 
-  // if we got an array of strings rather than a keygrip, then
-  // keygrip it up.
-  if (opt.keys) {
-    if (!KeyGrip)
-      throw new Error('keys provided by KeyGrip not available')
-    else if (Array.isArray(opt.keys))
-      this.keys = new KeyGrip(opt.keys)
-    else if (opt.keys instanceof KeyGrip)
-      this.keys = opt.keys
-    else
-      throw new Error('invalid keys provided')
-  }
+  if (!redSess.store)
+    redSess.store = new RedStore(opt.client || redSess.client)
 
-  // 2 week sessions by default.
-  this.expire = opt.expire || 60 * 60 * 24 * 14
-
-  // set up the cookies thingie
-  this.cookies = opt.cookies || new Cookies(req, res, this.keys)
-
-  // set the s-cookie
-  var name = this.cookieName = opt.cookieName || 's'
-  var expireDate = new Date(Date.now() + (this.expire*1000))
-  var copt = { expires: expireDate, signed: !!this.keys }
-
-  var s = this.cookies.get(name, copt)
-  if (!s)
-    s = require('crypto').randomBytes(30).toString('base64')
-
-  this.cookies.set(name, s, copt)
-  this.token = s
-
-  if (!this.token)
-    throw new Error('could not load session token')
-
-  this.id = "session:" + this.token
-  this.client = opt.client || RedSess.client
-  this.request = req
-  this.response = res
+  return genericSession(req, res, redSess.store, opt)
 }
 
-RedSess.createClient = function (conf) {
+redSess.createClient = function (conf) {
   conf = conf || {}
-  RedSess.client = redis.createClient(conf.port, conf.host, conf)
+  redSess.client = redis.createClient(conf.port, conf.host, conf)
   if (conf.auth)
-    RedSess.client.auth(conf.auth)
-  return RedSess.client
+    redSess.client.auth(conf.auth)
+  return redSess.client
 }
 
-RedSess.quit = RedSess.close = RedSess.end = function (cb) {
-  if (!RedSess.client)
+redSess.quit = redSess.close = redSess.end = function (cb) {
+  if (!redSess.client)
     return cb && cb()
   if (cb)
-    RedSess.client.once("end", cb)
-  RedSess.client.quit()
+    redSess.client.once("end", cb)
+  redSess.client.quit()
 }
 
-RedSess.destroy = function () {
-  RedSess.client.end()
+redSess.destroy = function () {
+  redSess.client.end()
 }
 
+function RedStore (client) {
+  this.client = client || redSess.client
+}
 
-
-RedSess.prototype.del = function (k, cb) {
-  if (typeof k === 'function' || !k && !cb)
-    return this.delAll(k || cb)
-
+RedStore.prototype.del = function (id, k, expire, cb) {
   // actually, delete all keys starting with k:* as well
-  this.client.hkeys(this.id, function (er, keys) {
+  this.client.hkeys(id, function (er, keys) {
     if (er)
-      return cb && cb(er)
+      return cb(er)
 
     var keys = keys.filter(function (key) {
       return key.split(/:/)[0] === k
     })
 
     if (!keys.length)
-      return cb && cb()
+      return cb()
 
-    keys.unshift(this.id)
+    keys.unshift(id)
     this.client.hdel(keys, function (er) {
-      this.client.expire(this.id, this.expire)
-      if (cb)
-        return cb(er)
+      this.client.expire(id, expire)
+      cb(er)
     }.bind(this))
   }.bind(this))
 }
 
-RedSess.prototype.delAll = function (cb) {
-  this.client.del(this.id, cb || function(){})
+RedStore.prototype.delAll = function (id, cb) {
+  this.client.del(id, cb)
 }
 
-// delete all data, and kill the session entirely
-RedSess.prototype.destroy = function (cb) {
-  this.client.del(this.id, function (er) {
-    this.cookies.set(this.cookieName, '', {
-      expires: new Date(0),
-      signed: !!this.keys
-    })
-    cb(er)
-  }.bind(this))
-}
-
-RedSess.prototype.set = function (k, v, cb) {
+RedStore.prototype.set = function (id, k, v, expire, cb) {
   var kv = {}
-
-  if (typeof v === 'function')
-    cb = v, v = null
 
   if (v)
     kv[k] = v
   else
     kv = k
 
-
   kv = flatten(kv)
-  this.client.hmset(this.id, kv, function (er) {
-    this.client.expire(this.id, this.expire)
-    if (cb)
-      return cb(er)
+  this.client.hmset(id, kv, function (er) {
+    this.client.expire(id, expire)
+    cb(er)
   }.bind(this))
 }
 
-RedSess.prototype.get = function (k, cb) {
-  if (typeof k === 'function' || !k)
-    return this.getAll(k || cb)
-
-  if (!cb)
-    return this.client.expire(this.id, this.expire)
-
-  this.getAll(function (er, all) {
+RedStore.prototype.get = function (id, k, expire, cb) {
+  this.getAll(id, expire, function (er, all) {
     if (er || !all)
       return cb(er, null)
-    return cb(null, all.hasOwnProperty(k) ? all[k] : null)
+    cb(null, all.hasOwnProperty(k) ? all[k] : null)
   }.bind(this))
 }
 
-RedSess.prototype.getAll = function (cb) {
-  // if no cb, then just update the expiration
-  if (!cb)
-    return this.client.expire(this.id, this.expire)
-
-  this.client.hgetall(this.id, function (er, data) {
-    this.client.expire(this.id, this.expire)
+RedStore.prototype.getAll = function (id, expire, cb) {
+  this.client.hgetall(id, function (er, data) {
+    this.client.expire(id, expire)
     if (!er)
       data = unflatten(data)
     cb(er, data)
   }.bind(this))
+}
+
+RedStore.prototype.expire = function (id, expire) {
+  this.client.expire(id, expire)
 }
 
 function flatten (obj, into, prefix) {
