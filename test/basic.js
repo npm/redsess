@@ -34,6 +34,11 @@ tap.test('setup', function (t) {
     console.error('SERVER', req.url)
     req.cookies = res.cookies = new Cookies(req, res)
     req.session = res.session = new RedSess(req, res)
+    var session = new RedSess(req, res, {
+      cookieOptions: {
+        path: "/cookie"
+      }
+    })
 
     res.send = function (n) {
       res.writeHead(200)
@@ -102,6 +107,12 @@ tap.test('setup', function (t) {
           if (er) throw er;
           res.send(JSON.stringify(
             { ok: true, destroyed: true }))
+        })
+
+      case '/cookie':
+        return session.set('str', 'str', function (er) {
+          if (er) throw er
+          res.send()
         })
 
       default:
@@ -280,9 +291,10 @@ tap.test('/del/all', function (t) {
 // now delete our session and start over
 tap.test('/destroy', function (t) {
   req('/destroy', function (er, res, data) {
-    var c = jar.cookies[0]
+    var c = jar.cookies[1]
     t.ok(c)
     t.equal(c.name, 's', 'cookie name')
+    t.equal(c.path, '/', 'cookie path')
     t.equal(c.value, '', 'destroyed cookie value')
     t.ok(c.httpOnly)
     t.type(c.expires, Date)
@@ -309,6 +321,18 @@ tap.test('re-establish session', function (t) {
     t.ok(c.httpOnly)
     t.type(c.expires, Date)
     t.ok(c.expires.getTime() > Date.now() + 60*1000)
+
+    t.end()
+  })
+})
+
+
+tap.test('/cookie', function (t) {
+  req('/cookie', function (er, res, data) {
+    var cookie = res.headers['set-cookie'][1]
+
+    t.ok(cookie.indexOf("/cookie") > -1)
+
     t.end()
   })
 })
