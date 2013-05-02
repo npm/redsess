@@ -10,6 +10,9 @@ var util = require('util')
 try { var KeyGrip = require('keygrip') } catch (e) {}
 
 function RedSess (req, res, opt) {
+  if (!(this instanceof RedSess))
+    return new RedSess(req, res, opt)
+
   opt = opt || {}
   if (!RedSess.client && !opt.client) {
     console.error('RedSess: no client yet', req.url, req.headers)
