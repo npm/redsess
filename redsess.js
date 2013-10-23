@@ -177,7 +177,7 @@ RedSess.prototype.getAll = function (cb) {
 }
 
 function flatten (obj, into, prefix) {
-  if (!obj) return obj
+  if (!obj || typeof obj !== 'object') return obj
   into = into || {}
   prefix = prefix || ''
   if (prefix) prefix += ':'
