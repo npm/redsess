@@ -33,7 +33,11 @@ tap.test('setup', function (t) {
   server = http.createServer(function (req, res) {
     console.error('SERVER', req.url)
     req.cookies = res.cookies = new Cookies(req, res)
-    req.session = res.session = new RedSess(req, res)
+    var options = {}
+    if (req.url === '/token') {
+      options.token = 'super-duper-custom-token'
+    }
+    req.session = res.session = new RedSess(req, res, options)
     var session = new RedSess(req, res, {
       cookieOptions: {
         path: "/cookie"
@@ -113,6 +117,13 @@ tap.test('setup', function (t) {
         return session.set('str', 'str', function (er) {
           if (er) throw er
           res.send()
+        })
+
+      case '/token':
+        return session.set('str', 'hai', function (er) {
+          if (er) throw er
+          res.send(JSON.stringify(
+            { id: res.session.id, ok: true }))
         })
 
       default:
@@ -332,6 +343,18 @@ tap.test('/cookie', function (t) {
     var cookie = res.headers['set-cookie'][1]
 
     t.ok(cookie.indexOf("/cookie") > -1)
+
+    t.end()
+  })
+})
+
+tap.test('/token', function (t) {
+  request({ url: 'http://localhost:' + PORT + '/token'
+          , jar: request.jar()
+          , json: true }, function (er, res, data) {
+    if (er) throw er
+    t.equal(res.statusCode, 200)
+    t.deepEqual(data, { id: 'session:super-duper-custom-token', ok: true })
 
     t.end()
   })
