@@ -55,7 +55,9 @@ function RedSess (req, res, opt) {
   if (!s)
     s = opt.token || require('crypto').randomBytes(30).toString('base64')
 
-  this.cookies.set(name, s, copt)
+  if (res)
+    this.cookies.set(name, s, copt)
+
   this.token = s
 
   if (!this.token)
