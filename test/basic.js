@@ -115,6 +115,14 @@ tap.test('setup', function (t) {
           res.send()
         })
 
+      case '/no-response':
+        session = new RedSess(req)
+        return session.set('str', 'str', function (er) {
+          if (er) throw er
+          res.send(JSON.stringify(
+            { id: res.session.id, ok: true, str: str }))
+        })
+
       default:
         res.writeHead(404)
         res.end(JSON.stringify(
@@ -333,6 +341,15 @@ tap.test('/cookie', function (t) {
 
     t.ok(cookie.indexOf("/cookie") > -1)
 
+    t.end()
+  })
+})
+
+tap.test('no response object passed to RedSess constructor', function (t) {
+  req('/no-response', function (er, res, data) {
+    if (er) throw er
+    t.equal(res.statusCode, 200)
+    t.deepEqual(data, { id: id, ok: true, str: str })
     t.end()
   })
 })
