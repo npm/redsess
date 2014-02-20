@@ -69,6 +69,10 @@ function RedSess (req, res, opt) {
   this.response = res
 }
 
+RedSess.setClient = function (client) {
+  RedSess.client = client
+}
+
 RedSess.createClient = function (conf) {
   conf = conf || {}
   RedSess.client = redis.createClient(conf.port, conf.host, conf)
