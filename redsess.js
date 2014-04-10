@@ -101,11 +101,11 @@ RedSess.prototype.del = function (k, cb) {
     if (er)
       return cb && cb(er)
 
-    data = JSON.parse(data)
+    data = parse(data)
 
     delete data[k]
 
-    this.client.set(this.id, JSON.stringify(data), function (er) {
+    this.client.set(this.id, stringify(data), function (er) {
       this.client.expire(this.id, this.expire)
       if (cb)
         return cb(er)
@@ -138,14 +138,14 @@ RedSess.prototype.set = function (k, v, cb) {
     if (er)
       cb(er)
 
-    kv = JSON.parse(data) || {}
+    kv = parse(data) || {}
 
     if (v)
       kv[k] = v
     else
       kv = k
 
-    this.client.set(this.id, JSON.stringify(kv), function (er) {
+    this.client.set(this.id, stringify(kv), function (er) {
       this.client.expire(this.id, this.expire)
       if (cb)
         return cb(er)
@@ -175,7 +175,23 @@ RedSess.prototype.getAll = function (cb) {
   this.client.get(this.id, function (er, data) {
     this.client.expire(this.id, this.expire)
     if (!er)
-      data = JSON.parse(data)
+      data = parse(data)
     cb(er, data)
   }.bind(this))
+}
+
+function parse(str) {
+  try {
+    return JSON.parse(str) || {}
+  } catch (er) {
+    return {}
+  }
+}
+
+function stringify(obj) {
+  try {
+    return JSON.stringify(obj) || ""
+  } catch (er) {
+    return ""
+  }
 }
