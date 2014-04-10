@@ -93,26 +93,19 @@ RedSess.destroy = function () {
   RedSess.client.end()
 }
 
-
-
 RedSess.prototype.del = function (k, cb) {
   if (typeof k === 'function' || !k && !cb)
     return this.delAll(k || cb)
 
-  // actually, delete all keys starting with k:* as well
-  this.client.hkeys(this.id, function (er, keys) {
+  this.client.get(this.id, function (er, data) {
     if (er)
       return cb && cb(er)
 
-    var keys = keys.filter(function (key) {
-      return key.split(/:/)[0] === k
-    })
+    data = JSON.parse(data)
 
-    if (!keys.length)
-      return cb && cb()
+    delete data[k]
 
-    keys.unshift(this.id)
-    this.client.hdel(keys, function (er) {
+    this.client.set(this.id, JSON.stringify(data), function (er) {
       this.client.expire(this.id, this.expire)
       if (cb)
         return cb(er)
@@ -136,22 +129,27 @@ RedSess.prototype.destroy = function (cb) {
 }
 
 RedSess.prototype.set = function (k, v, cb) {
-  var kv = {}
+  var kv
 
   if (typeof v === 'function')
     cb = v, v = null
 
-  if (v)
-    kv[k] = v
-  else
-    kv = k
+  this.client.get(this.id, function (er, data) {
+    if (er)
+      cb(er)
 
+    kv = JSON.parse(data) || {}
 
-  kv = flatten(kv)
-  this.client.hmset(this.id, kv, function (er) {
-    this.client.expire(this.id, this.expire)
-    if (cb)
-      return cb(er)
+    if (v)
+      kv[k] = v
+    else
+      kv = k
+
+    this.client.set(this.id, JSON.stringify(kv), function (er) {
+      this.client.expire(this.id, this.expire)
+      if (cb)
+        return cb(er)
+    }.bind(this))
   }.bind(this))
 }
 
@@ -174,42 +172,10 @@ RedSess.prototype.getAll = function (cb) {
   if (!cb)
     return this.client.expire(this.id, this.expire)
 
-  this.client.hgetall(this.id, function (er, data) {
+  this.client.get(this.id, function (er, data) {
     this.client.expire(this.id, this.expire)
     if (!er)
-      data = unflatten(data)
+      data = JSON.parse(data)
     cb(er, data)
   }.bind(this))
-}
-
-function flatten (obj, into, prefix) {
-  if (!obj || typeof obj !== 'object') return obj
-  into = into || {}
-  prefix = prefix || ''
-  if (prefix) prefix += ':'
-  Object.keys(obj).forEach(function (k) {
-    if (obj[k] && typeof obj[k] === "object") {
-      flatten(obj[k], into, prefix + k)
-    } else into[prefix + k] = '' + obj[k]
-  })
-  return into
-}
-
-function unflatten (obj) {
-  if (!obj || typeof obj !== "object") return obj
-  var into = {}
-  Object.keys(obj).forEach(function (k) {
-    // actually an object
-    var m = k.split(/:/)
-    , tail = m.pop()
-    , p = into
-
-    m.forEach(function (n) {
-      if (!p[n] || typeof p[n] !== "object") p[n] = {}
-      p = p[n]
-    })
-    p[tail] = obj[k]
-
-  })
-  return into
 }
