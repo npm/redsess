@@ -6,6 +6,13 @@ This is built on top of [jed/cookies](https://github.com/jed/cookies).
 You can optionally pass in a KeyGrip instance, or an array of keys to
 use to sign cookies.
 
+## Breaking Changes in 1.0.0
+
+Sessions are now stored as stringified JSON objects using `set` and `get`.
+This means that *all sessions that were created using previous versions of
+redsess will need to be cleared out/nuked/obliterated*. Before upgrading
+to 1.0.0, let your users know that their sessions will be removed!
+
 ## Example
 
 ```javascript
