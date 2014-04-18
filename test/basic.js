@@ -291,7 +291,7 @@ tap.test('/del/all', function (t) {
     req('/get/all', function (er, res, data) {
       if (er) throw er
       t.equal(res.statusCode, 200)
-      t.deepEqual(data, { id: id, ok: true, data: null })
+      t.deepEqual(data, { id: id, ok: true, data: {} })
 
       // note that deleting all the *data* doesn't change the session.
       var c = jar.cookies[0]
