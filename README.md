@@ -1,7 +1,5 @@
 # redsess
 
-Build Status: [![Build Status](https://travis-ci.org/npm/redsess.png)](https://travis-ci.org/npm/redsess)
-
 Yet another redis session thing for node.
 
 This is built on top of [jed/cookies](https://github.com/jed/cookies).
