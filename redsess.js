@@ -5,6 +5,7 @@ RedSess.client = null
 
 var Cookies = require('cookies')
 var util = require('util')
+var redisAtomicJSON = require('redis-atomic-json')
 
 // optional dependency
 try { var KeyGrip = require('keygrip') } catch (e) {}
@@ -22,6 +23,8 @@ function RedSess (req, res, opt) {
     res.end('Redis client not yet loaded.\n')
     return
   }
+
+  if (opt.client) redisAtomicJSON.wrap(opt.client)
 
   // if we got an array of strings rather than a keygrip, then
   // keygrip it up.
@@ -78,7 +81,7 @@ RedSess.createClient = function (conf) {
   RedSess.client = redis.createClient(conf.port, conf.host, conf)
   if (conf.auth)
     RedSess.client.auth(conf.auth)
-  return RedSess.client
+  return redisAtomicJSON.wrap(RedSess.client)
 }
 
 RedSess.quit = RedSess.close = RedSess.end = function (cb) {
@@ -97,20 +100,11 @@ RedSess.prototype.del = function (k, cb) {
   if (typeof k === 'function' || !k && !cb)
     return this.delAll(k || cb)
 
-  this.client.get(this.id, function (er, data) {
-    if (er)
-      return cb && cb(er)
-
-    data = parse(data)
-
-    delete data[k]
-
-    this.client.set(this.id, stringify(data), function (er) {
-      this.client.expire(this.id, this.expire)
-      if (cb)
-        return cb(er)
-    }.bind(this))
-  }.bind(this))
+  this.client.jdel(this.id, k, function (er) {
+    this.client.expire(this.id, this.expire)
+    if (cb)
+      return cb(er)
+  }.bind(this));
 }
 
 RedSess.prototype.delAll = function (cb) {
@@ -129,28 +123,17 @@ RedSess.prototype.destroy = function (cb) {
 }
 
 RedSess.prototype.set = function (k, v, cb) {
-  var kv
-
   if (typeof v === 'function')
     cb = v, v = null
 
-  this.client.get(this.id, function (er, data) {
-    if (er)
-      cb(er)
+  var callback = function(er) {
+    this.client.expire(this.id, this.expire)
+    if (cb)
+      return cb(er)
+  }.bind(this)
 
-    kv = parse(data) || {}
-
-    if (v)
-      kv[k] = v
-    else
-      kv = k
-
-    this.client.set(this.id, stringify(kv), function (er) {
-      this.client.expire(this.id, this.expire)
-      if (cb)
-        return cb(er)
-    }.bind(this))
-  }.bind(this))
+  if (v) this.client.jset(this.id, k, v, callback)
+  else this.client.jset(this.id, k, callback)
 }
 
 RedSess.prototype.get = function (k, cb) {
