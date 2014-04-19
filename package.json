@@ -10,7 +10,8 @@
   "main": "redsess.js",
   "dependencies": {
     "redis": "~0.8.1",
-    "cookies": "~0.3.2"
+    "cookies": "~0.3.2",
+    "redis-atomic-json": "~0.0.2"
   },
   "optionalDependencies": {
     "keygrip": "~0.2.2"
