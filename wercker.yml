@@ -15,3 +15,8 @@ build:
         code: |
           echo "node version $(node -v) running"
           echo "npm version $(npm -v) running"
+  after-steps:
+    - sherzberg/slack-notify:
+        subdomain: wercker
+        token: $SLACK_TOKEN
+        channel: github-commits
